@@ -147,22 +147,59 @@ def run_with_model_fallback(run: Callable[[str], object], *,
         return run(fallback), fallback
 
 
-def langchain_llm(model: str, *, max_tokens: int = DEFAULT_MAX_TOKENS, caller: str = "ragas"):
-    """ChatOpenAI cho RAGAS (cần langchain-openai; import lazy để test offline chạy được).
+def _capped_chat_class():
+    """Trả về ChatOpenAI nhưng ép tham số `n` <= 1.
 
-    Gắn callback của src/llm_log để ghi RAW từng lượt chấm điểm của RAGAS vào
-    `.hermes/llm_raw/` (tách khỏi artifacts của bài nộp).
+    OpenCode Go TỪ CHỐI n > 1 — đã kiểm chứng bằng request thật:
+        n=1 -> HTTP 200; n=2/n=3 -> HTTP 400
+        {"error":{"type":"invalid_request_error","message":"Upstream request failed:
+          [invalid_parameter] 参数校验失败: /n: 3 is not less or equal to 1"}}
+    RAGAS `answer_relevancy` mặc định `strictness = 3` nên gọi n=3; nếu không ép lại thì
+    metric trả NaN cho mọi câu (đúng lỗi làm hỏng lượt smoke đầu tiên của Phase A).
+
+    Hệ quả phải ghi trong báo cáo: answer_relevancy chỉ có MỘT lượt sinh câu hỏi cho mỗi
+    lời gọi (prompt vẫn yêu cầu nhiều câu hỏi trong cùng một response), tức strictness bị
+    hạ xuống 1 so với mặc định 3 của RAGAS.
     """
     from langchain_openai import ChatOpenAI
 
+    class _CappedChatOpenAI(ChatOpenAI):
+        def _get_request_payload(self, *args, **kwargs):
+            payload = super()._get_request_payload(*args, **kwargs)
+            if payload.get("n") not in (None, 1):
+                global _N_CAPPED_LOGGED
+                if not _N_CAPPED_LOGGED:
+                    _N_CAPPED_LOGGED = True
+                    from src import llm_log
+                    llm_log.write({"caller": "llm_client.n_capped",
+                                   "request": {"n_requested": payload["n"], "n_sent": 1},
+                                   "note": "provider giới hạn n<=1 (RAGAS answer_relevancy strictness=3)"})
+                payload["n"] = 1
+            return payload
+
+    return _CappedChatOpenAI
+
+
+_N_CAPPED_LOGGED = False
+
+
+def langchain_llm(model: str, *, max_tokens: int = 2048, caller: str = "ragas"):
+    """ChatOpenAI cho RAGAS (import lazy để test offline chạy được).
+
+    - Ép `n` <= 1 vì provider từ chối n>1 (xem `_capped_chat_class`).
+    - `max_tokens` mặc định 2048: reasoning model tiêu token cho reasoning trước khi sinh
+      content, để thấp quá thì RAGAS nhận câu trả lời rỗng.
+    - Gắn callback của src/llm_log để ghi RAW từng lượt chấm điểm vào `.hermes/llm_raw/`.
+    """
     from src import llm_log
 
     config = settings()
     handler = llm_log.callback_handler(caller)
-    return ChatOpenAI(model=model, api_key=config["api_key"], base_url=config["base_url"],
-                      default_headers=headers(), temperature=0, max_tokens=max_tokens,
-                      max_retries=3, timeout=180,
-                      **({"callbacks": [handler]} if handler is not None else {}))
+    return _capped_chat_class()(
+        model=model, api_key=config["api_key"], base_url=config["base_url"],
+        default_headers=headers(), temperature=0, max_tokens=max_tokens,
+        max_retries=3, timeout=180,
+        **({"callbacks": [handler]} if handler is not None else {}))
 
 
 def langchain_embeddings():
