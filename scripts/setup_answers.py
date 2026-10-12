@@ -100,7 +100,7 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
             ctx = "\n\n".join(contexts)
             resp = client.chat.completions.create(
                 model=GENERATION_MODEL,
-                max_tokens=1024,   # reasoning model cần đủ chỗ, nếu không content trả về null
+                max_tokens=2048,   # reasoning model cần đủ chỗ, nếu không content trả về null
                 messages=[
                     {"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
                     {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"},
@@ -110,11 +110,25 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
             from src import llm_log
             llm_log.log_chat(caller="setup_answers.generation", model=GENERATION_MODEL,
                              messages=[{"role": "user", "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}],
-                             max_tokens=1024, response_format=None, response=resp,
+                             max_tokens=2048, response_format=None, response=resp,
                              extra={"question": q, "n_contexts": len(contexts)})
             reported_model = getattr(resp, "model", None)
             used_model = reported_model if isinstance(reported_model, str) and reported_model.strip() else GENERATION_MODEL
-            return resp.choices[0].message.content, contexts, "llm", used_model
+            content = resp.choices[0].message.content
+            if not (isinstance(content, str) and content.strip()):
+                # content rỗng = reasoning model tiêu hết max_tokens trước khi sinh câu trả lời
+                # (đã gặp thật ở 4/50 câu của lượt chạy trước). Thử lại bằng FALLBACK_MODEL
+                # qua llm_client — hàm này tự raise nếu vẫn rỗng, không trả `None` lặng lẽ.
+                from src import llm_client
+                fallback_model = llm_client.settings()["fallback"]
+                print(f"  ⚠️  content rỗng với {used_model} → thử lại bằng {fallback_model}")
+                content = llm_client.chat(
+                    [{"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
+                     {"role": "user", "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}],
+                    model=fallback_model, max_tokens=2048,
+                    caller="setup_answers.generation_retry")
+                used_model = fallback_model
+            return content, contexts, "llm", used_model
         except Exception as e:
             print(f"  ⚠️  LLM generation failed: {e}")
 
