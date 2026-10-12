@@ -177,26 +177,22 @@ class DenseSearch:
         if not self.client.collection_exists(collection):
             return []
 
-        from qdrant_client import models
-
         query_vector = self._get_encoder().encode(query)[0].tolist()
-        # NOTE 1/2/3 for qdrant-client 1.19 with QdrantClient(":memory:"):
-        #   1) collection_name must be positional — collection= raises TypeError.
-        #   2) a plain list is read as a 2-D array -> "Multivector  is not found";
-        #      wrap it in models.NearestQuery(nearest=...).
-        #   3) vectors are L2-normalised, so Distance.DOT == cosine.
-        response = self.client.query_points(
-            collection, query=models.NearestQuery(nearest=query_vector),
-            limit=top_k)
+        # NOTE for qdrant-client 1.9.x (pin của lab, requirements: >=1.9,<1.10):
+        #   - `query_points()` chỉ có từ 1.10+ -> ở bản pin dùng `search()`.
+        #   - query_vector truyền list[float] như tài liệu 1.9 (NamedVector cũng được).
+        #   - vectors đã L2-normalise nên Distance.DOT == cosine.
+        hits = self.client.search(collection_name=collection,
+                                  query_vector=query_vector, limit=top_k)
 
         return [
             SearchResult(
-                text=pt.payload["text"],
-                score=float(pt.score),
-                metadata=pt.payload,
+                text=point.payload["text"],
+                score=float(point.score),
+                metadata=point.payload,
                 method="dense",
             )
-            for pt in response.points
+            for point in hits
         ]
 
 
