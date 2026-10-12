@@ -102,6 +102,10 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
                     {"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
                     {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"},
                 ],
+                # Model reasoning sẽ đốt token vào reasoning_content rồi mới trả
+                # content, làm chậm và tốn tiền gấp nhiều lần. Endpoint không hỗ
+                # trợ tham số này sẽ bỏ qua.
+                reasoning_effort="none",
             )
             reported_model = getattr(resp, "model", None)
             used_model = reported_model if isinstance(reported_model, str) and reported_model.strip() else GENERATION_MODEL

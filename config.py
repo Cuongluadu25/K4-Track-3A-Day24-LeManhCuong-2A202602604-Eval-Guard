@@ -45,8 +45,14 @@ GUARDRAILS_CONFIG_DIR = os.path.join(ROOT_DIR, "guardrails")
 PAIR_QUESTION_IDS = (1, 5, 12, 21, 41)
 
 # --- LLM Judge ---
-GENERATION_MODEL = "gpt-4o-mini"
-JUDGE_MODEL = "gpt-4o-mini"
+# Model dùng cho cả generation (setup_answers, m5 enrichment) lẫn judge (Phase B).
+# Mặc định giữ nguyên gpt-4o-mini nên chạy với OpenAI thật không đổi hành vi.
+# Khi trỏ vào endpoint OpenAI-compatible khác thì đặt LAB_LLM_MODEL trong .env.
+# LƯU Ý: phải đổi `model:` trong guardrails/config.yml cho khớp, vì giá trị đó
+# được guard_models() ghi thẳng vào metadata của artifacts/guard_results.json.
+LLM_MODEL = os.getenv("LAB_LLM_MODEL", "gpt-4o-mini")
+GENERATION_MODEL = LLM_MODEL
+JUDGE_MODEL = LLM_MODEL
 
 # --- Guardrail latency budget ---
 LATENCY_BUDGET_P95_MS = 500  # Full guard target; Task 12 currently measures input guards only.

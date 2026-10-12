@@ -2,8 +2,20 @@ colang_version: "1.0"
 
 models:
   - type: main
-    engine: openai
-    model: gpt-4o-mini
+    # `compat` = provider OpenAI-compatible tự đăng ký trong guardrails/config.py.
+    # Không dùng `openai` được vì NeMo 0.10.0 chỉ chọn ChatOpenAI khi tên model
+    # chứa "gpt-3.5"/"gpt-4"; `deepseek-chat` không thoả nên sẽ rơi vào
+    # langchain_openai.OpenAI (Completions API cũ) và lỗi ở Phase C.
+    # Endpoint thật lấy từ OPENAI_API_BASE trong .env.
+    engine: compat
+    # Phải khớp model thật; giá trị này được ghi vào metadata guard_results.json.
+    model: deepseek-flash
+    # Model reasoning đốt token vào phần suy luận trước khi trả lời, khiến mỗi
+    # self-check chậm thêm vài giây — ảnh hưởng trực tiếp phép đo P95 ở Task 12.
+    # NeMo truyền thẳng khối này vào constructor của provider (llmrails.py:335).
+    parameters:
+      model_kwargs:
+        reasoning_effort: none
 
 instructions:
   - type: general
