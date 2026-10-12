@@ -11,11 +11,11 @@ nếu nhóm thấy không cần.
 | `src/phase_a_ragas.py` (Task 1–4) | ✅ xong, `# TODO` = 0, `pytest tests/test_phase_a.py -q` → 6 passed |
 | `src/phase_b_judge.py`, `src/phase_c_guard.py` | ⏳ còn TODO (Member C và D) |
 | `artifacts/answers_50q.json` | ✅ có, 50 câu, 20/20/10, mode=llm, đã validate schema |
-| `artifacts/ragas_50q.json` | ⏳ **CHƯA có** — cần một lượt chạy đầy đủ `--phase a --live` (xem mục 3) |
-| `artifacts/judge_results.json`, `guard_results.json` | ⏳ của C và D |
-| `doc/reports/failure_clusters.md` | ⏳ chờ `ragas_50q.json` |
-| `doc/TEAM.md` | 🔶 đã có dòng + mục INDIVIDUAL của **Nguyễn Trọng Minh (2A202602496)**; A cần thêm các thành viên còn lại |
-| `doc/reports/bias_report.md`, `blueprint.md` | ⏳ của C và A |
+| `artifacts/ragas_50q.json` | ✅ **ĐÃ CÓ** (12/10/2026 21:44, `run_kind=live`): 50 dòng `per_question`, đủ 4 metric hữu hạn 50/50 sau khi chạy lại 13 câu NaN bằng `qwen3.8-max` (8 câu) và `glm-5.3-flash` (5 câu) |
+| `artifacts/judge_results.json` | ✅ C đã đẩy lên `main` (`bc52c99`); `guard_results.json` ⏳ của D |
+| `doc/reports/failure_clusters.md` | ✅ **đã điền** bằng số thật; `validate_markdown` PASS |
+| `doc/TEAM.md` | 🔶 đã có dòng + mục INDIVIDUAL của **Nguyễn Trọng Minh (2A202602496)**; còn `{{...}}` ở dòng 3, 5, 7, 9, 11, 20, 22, 24, 28, 29, 30, 49 (A điền: tên nhóm, link repo, người nộp, deadline, commit chấm, dòng thành viên 1 và 3, người tích hợp, môi trường) |
+| `doc/reports/bias_report.md`, `blueprint.md` | 🔶 C đã điền bias_report; `blueprint.md` của A còn `{{...}}` |
 
 ## 2. Ai có thể làm ngay, ai phải chờ (trả lời câu hỏi "có cần đợi 200 bước của B không?")
 
@@ -34,7 +34,7 @@ nếu nhóm thấy không cần.
 không thể trở thành artifact nộp bài. Vì vậy:
 
 - Batch nhỏ (3–10 câu) = kiểm chứng code chạy đúng (đã làm).
-- Lượt đầy đủ 200 bước = bắt buộc để có `artifacts/ragas_50q.json` (khoảng 12 phút, không tốn tiền).
+- Lượt đầy đủ 200 bước = bắt buộc để có `artifacts/ragas_50q.json`. Thời gian đo thật ngày 12/10/2026: **43:31 cho lượt chính** (13.1 s/bước) + **~15 phút cho lượt chạy lại các câu NaN** = khoảng **60 phút**, không tốn tiền (model free + embedding local). Ước lượng "12 phút" ở bản trước là sai vì lúc đó câu trả lời còn rất ngắn.
 
 ## 4. Việc cụ thể cho từng người
 
