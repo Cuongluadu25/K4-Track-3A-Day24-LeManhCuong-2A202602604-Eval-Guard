@@ -97,14 +97,20 @@ GENERATION_RETRY_MODELS = [name.strip() for name in os.getenv(
     "GENERATION_RETRY_MODELS", "glm-5.3-flash,qwen3.8-max").split(",") if name.strip()]
 
 
+_WRAPPERS = "\"'\u201c\u201d\u2018\u2019()[]{}"
+
+
 def _sentence_ok(text: str) -> bool:
     """Câu trả lời phải là câu hoàn chỉnh, có dấu kết câu.
 
     RAGAS faithfulness tách 'sentences from the answer' rồi mới sinh statements; một cụm rời
     như '1.000.000 VNĐ/tháng' (không có dấu chấm) làm RAGAS không sinh được statement nào và
     trả về NaN cho metric đó — đã gặp thật với câu id 3.
+
+    Phải bỏ dấu nháy/ngoặc bao ngoài trước khi xét ký tự cuối: model hay trả về cả câu trong
+    dấu nháy (câu id 37 kết thúc bằng `nội bộ."`), nếu không sẽ báo nhầm là câu không hoàn chỉnh.
     """
-    stripped = (text or "").strip()
+    stripped = (text or "").strip().strip(_WRAPPERS)
     return len(stripped) > 3 and stripped[-1] in ".!?…"
 
 
