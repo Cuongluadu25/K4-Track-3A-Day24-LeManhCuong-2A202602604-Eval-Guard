@@ -82,24 +82,48 @@ def _extract_content(response, model: str) -> str:
 
 def chat(messages: list[dict], *, model: str | None = None,
          max_tokens: int = DEFAULT_MAX_TOKENS, temperature: float = 0,
-         response_format: dict | None = None, client=None) -> str:
-    """Gọi chat completion; tự chuyển sang FALLBACK_MODEL nếu model chính lỗi."""
+         response_format: dict | None = None, client=None, caller: str = "llm_client") -> str:
+    """Gọi chat completion; tự chuyển sang FALLBACK_MODEL nếu model chính lỗi.
+
+    Mọi lượt gọi (kể cả lượt lỗi) được ghi RAW vào `.hermes/llm_raw/` qua src/llm_log.py.
+    """
+    import time
+
+    from src import llm_log
+
     config = settings()
     primary = model or config["primary"]
     order = [primary] + ([config["fallback"]] if config["fallback"] != primary else [])
     active = client if client is not None else chat_client()
     errors: list[str] = []
     for candidate in order:
+        started = time.perf_counter()
+        kwargs = {"model": candidate, "messages": messages,
+                  "max_tokens": max_tokens, "temperature": temperature}
+        if response_format is not None:
+            kwargs["response_format"] = response_format
         try:
-            kwargs = {"model": candidate, "messages": messages,
-                      "max_tokens": max_tokens, "temperature": temperature}
-            if response_format is not None:
-                kwargs["response_format"] = response_format
-            return _extract_content(active.chat.completions.create(**kwargs), candidate)
+            response = active.chat.completions.create(**kwargs)
         except Exception as error:                      # noqa: BLE001 - muốn bắt mọi lỗi provider
+            llm_log.log_chat(caller=caller, model=candidate, messages=messages,
+                             max_tokens=max_tokens, response_format=response_format,
+                             error=error, latency_ms=(time.perf_counter() - started) * 1000)
             errors.append(f"{candidate}: {error}")
             if candidate != order[-1]:
                 print(f"⚠️  LLM {candidate} lỗi ({error}) → thử {order[-1]}")
+            continue
+        # Log cả khi content rỗng: đó là dữ liệu cần để debug reasoning model.
+        llm_log.log_chat(caller=caller, model=candidate, messages=messages,
+                         max_tokens=max_tokens, response_format=response_format,
+                         response=response, latency_ms=(time.perf_counter() - started) * 1000)
+        try:
+            return _extract_content(response, candidate)
+        except ValueError as content_error:
+            # Reasoning model hết max_tokens trước khi sinh content -> thử model dự phòng.
+            errors.append(f"{candidate}: {content_error}")
+            if candidate != order[-1]:
+                print(f"⚠️  LLM {candidate} trả content rỗng ({content_error}) → thử {order[-1]}")
+            continue
     raise RuntimeError("Tất cả model đều lỗi:\n  " + "\n  ".join(errors))
 
 
@@ -123,14 +147,22 @@ def run_with_model_fallback(run: Callable[[str], object], *,
         return run(fallback), fallback
 
 
-def langchain_llm(model: str, *, max_tokens: int = DEFAULT_MAX_TOKENS):
-    """ChatOpenAI cho RAGAS (cần langchain-openai; import lazy để test offline chạy được)."""
+def langchain_llm(model: str, *, max_tokens: int = DEFAULT_MAX_TOKENS, caller: str = "ragas"):
+    """ChatOpenAI cho RAGAS (cần langchain-openai; import lazy để test offline chạy được).
+
+    Gắn callback của src/llm_log để ghi RAW từng lượt chấm điểm của RAGAS vào
+    `.hermes/llm_raw/` (tách khỏi artifacts của bài nộp).
+    """
     from langchain_openai import ChatOpenAI
 
+    from src import llm_log
+
     config = settings()
+    handler = llm_log.callback_handler(caller)
     return ChatOpenAI(model=model, api_key=config["api_key"], base_url=config["base_url"],
                       default_headers=headers(), temperature=0, max_tokens=max_tokens,
-                      max_retries=3, timeout=180)
+                      max_retries=3, timeout=180,
+                      **({"callbacks": [handler]} if handler is not None else {}))
 
 
 def langchain_embeddings():

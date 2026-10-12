@@ -106,6 +106,12 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
                     {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"},
                 ],
             )
+            # Log RAW (ngoài bài nộp): .hermes/llm_raw/ — xem src/llm_log.py
+            from src import llm_log
+            llm_log.log_chat(caller="setup_answers.generation", model=GENERATION_MODEL,
+                             messages=[{"role": "user", "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}],
+                             max_tokens=1024, response_format=None, response=resp,
+                             extra={"question": q, "n_contexts": len(contexts)})
             reported_model = getattr(resp, "model", None)
             used_model = reported_model if isinstance(reported_model, str) and reported_model.strip() else GENERATION_MODEL
             return resp.choices[0].message.content, contexts, "llm", used_model
