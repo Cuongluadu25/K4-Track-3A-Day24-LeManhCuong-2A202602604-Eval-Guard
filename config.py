@@ -16,8 +16,12 @@ COLLECTION_NAME = "lab24_production"
 NAIVE_COLLECTION = "lab24_naive"
 
 # --- Embedding (same as Day 18) ---
-EMBEDDING_MODEL = "BAAI/bge-m3"
+# Plan 24 dùng LM Studio local cho embedding (OpenCode Go KHÔNG có /v1/embeddings).
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
 EMBEDDING_DIM = 1024
+EMBED_BACKEND = os.getenv("EMBED_BACKEND", "sentence_transformers")  # "lmstudio" | "sentence_transformers"
+LOCAL_EMBED_BASE_URL = os.getenv("LOCAL_EMBED_BASE_URL", "http://127.0.0.1:1234/v1")
+LOCAL_EMBED_API_KEY = os.getenv("LOCAL_EMBED_API_KEY", "lm-studio")
 
 # --- Chunking (same as Day 18) ---
 HIERARCHICAL_PARENT_SIZE = 2048
@@ -44,9 +48,18 @@ OUTPUT_SET_PATH = os.path.join(FIXTURES_DIR, "output_set_4.json")
 GUARDRAILS_CONFIG_DIR = os.path.join(ROOT_DIR, "guardrails")
 PAIR_QUESTION_IDS = (1, 5, 12, 21, 41)
 
-# --- LLM Judge ---
-GENERATION_MODEL = "gpt-4o-mini"
-JUDGE_MODEL = "gpt-4o-mini"
+# --- LLM Judge / provider ---
+# Day 24 chạy trên OpenCode Go (OpenAI-compatible). GENERATION_MODEL/JUDGE_MODEL vẫn giữ
+# giá trị mặc định của đề bài khi .env không khai gì, nhưng đọc .env trước để metadata
+# trong artifacts ghi ĐÚNG model thực sự được gọi (không khai gpt-4o-mini khi gọi model khác).
+LLM_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://opencode.ai/zen/go/v1")
+OPENCODE_SESSION = os.getenv("OPENCODE_SESSION", "lab24-ragas")
+LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("GENERATION_MODEL") or "gpt-4o-mini"
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "glm-5.3-flash")
+GENERATION_MODEL = os.getenv("GENERATION_MODEL") or LLM_MODEL
+JUDGE_MODEL = os.getenv("JUDGE_MODEL") or LLM_MODEL
+# Embedding cho RAGAS (LM Studio local; phải khác endpoint với LLM).
+RAGAS_EMBEDDING_MODEL = os.getenv("RAGAS_EMBEDDING_MODEL", EMBEDDING_MODEL)
 
 # --- Guardrail latency budget ---
 LATENCY_BUDGET_P95_MS = 500  # Full guard target; Task 12 currently measures input guards only.
