@@ -1,0 +1,252 @@
+{
+  "metadata": {
+    "format_version": 2,
+    "run_kind": "live",
+    "models": {
+      "generation": [
+        "longcat-2.5-preview-free"
+      ],
+      "evaluator": [],
+      "judge": [
+        "deepseek-flash"
+      ],
+      "guard": []
+    },
+    "created_at": "2026-10-12T10:39:14.655252+00:00",
+    "source_sha256": {
+      "answers_50q.json": "87d7d617fa0c8eb00ae8c5b5fdefeea5b6007bf8357458f9f9fb79b7d121f715",
+      "test_set_50q.json": "0e87f26e020a32c62ea0864940720618f39600b9d3378193704cf2f86e88446d",
+      "human_labels_10q.json": "e72338bd99c3d0165348c11997735bbb87c978fe018c24dfd29c9801d5c2b2c1"
+    }
+  },
+  "pair_sources": {
+    "A": "artifacts/answers_50q.json:answer",
+    "B": "fixtures/human_labels_10q.json:model_answer",
+    "reference": "fixtures/test_set_50q.json:ground_truth"
+  },
+  "pairwise_results": [
+    {
+      "question_id": 1,
+      "question": "Nhân viên được nghỉ bao nhiêu ngày khi kết hôn?",
+      "answer_a": "Nhân viên được nghỉ 3 ngày làm việc có lương khi kết hôn, và số ngày này không bị trừ vào phép năm.",
+      "answer_b": "Nhân viên được nghỉ 3 ngày làm việc có lương khi kết hôn.",
+      "winner_pass1": "A",
+      "winner_pass2": "A",
+      "final_winner": "A",
+      "reasoning_pass1": "Câu trả lời A khớp đầy đủ với reference: nghỉ 3 ngày làm việc có lương khi kết hôn và không trừ vào phép năm. Câu trả lời B chỉ nêu đúng phần 3 ngày làm việc có lương nhưng thiếu chi tiết quan trọng là không trừ vào phép năm, nên kém đầy đủ hơn.",
+      "reasoning_pass2": "Câu trả lời B khớp đầy đủ với reference: nhân viên được nghỉ 3 ngày làm việc có lương khi kết hôn và số ngày này không trừ vào phép năm. Câu trả lời A nêu đúng số ngày và việc có lương nhưng thiếu điều kiện quan trọng là không trừ vào phép năm, nên kém đầy đủ hơn.",
+      "position_consistent": true,
+      "scores_pass1": {
+        "A": 1.0,
+        "B": 0.7
+      },
+      "scores_pass2": {
+        "A": 1.0,
+        "B": 0.8
+      }
+    },
+    {
+      "question_id": 5,
+      "question": "Muốn mua thiết bị trị giá 55 triệu cần ai phê duyệt?",
+      "answer_a": "Theo quy trình mua sắm, đơn hàng trị giá 55.000.000 VNĐ nằm trong mức **trên 50.000.000 VNĐ**, do đó cần được **Tổng Giám đốc (CEO)** phê duyệt.\n\nBảng thẩm quyền được quy định tại phiên bản 2.2, có hiệu lực từ ngày 01/04/2024 của phòng Hành chính & Tài chính phân rõ: dưới 5.000.000 VNĐ do Trưởng phòng phê duyệt; từ 5.000.000 đến 50.000.000 VNĐ do Giám đốc phòng ban phê duyệt; trên 50.000.000 VNĐ do Tổng Giám đốc phê duyệt.\n\nNgoài ra, theo quy trình, mọi chi phí đều cần được **quản lý trực tiếp** phê duyệt trước khi nộp phòng Tài chính, và với giá trị từ 5.000.000 VNĐ trở lên còn cần thêm phê duyệt của **Kế toán trưởng**.",
+      "answer_b": "Cần Giám đốc phòng ban phê duyệt.",
+      "winner_pass1": "A",
+      "winner_pass2": "A",
+      "final_winner": "A",
+      "reasoning_pass1": "Câu hỏi hỏi về thẩm quyền phê duyệt thiết bị trị giá 55 triệu. Theo reference, đơn hàng trên 50.000.000 VNĐ cần Tổng Giám đốc (CEO) phê duyệt. Answer A xác định đúng 55 triệu nằm trên ngưỡng 50 triệu và kết luận cần CEO phê duyệt. Answer B nói cần Giám đốc phòng ban phê duyệt, trái với reference. Answer A có thêm các chi tiết về bảng thẩm quyền, phiên bản và các cấp phê duyệt khác không được reference hỗ trợ, nên không được đánh giá là hoàn hảo, nhưng phần cốt lõi trả lời đúng và đầy đủ theo reference; B sai hoàn toàn.",
+      "reasoning_pass2": "Câu hỏi hỏi về thiết bị 55 triệu, tức trên 50.000.000 VNĐ. Theo reference, mức này cần Tổng Giám đốc (CEO) phê duyệt. Answer A trả lời 'Giám đốc phòng ban' là sai vì áp dụng sai ngưỡng. Answer B xác định đúng cần CEO phê duyệt, nhưng có thêm nhiều chi tiết về phiên bản, ngày hiệu lực và các bước phê duyệt khác không được reference hỗ trợ, nên chưa thật súc tích. Tuy nhiên, xét tính chính xác cốt lõi, B đúng và A sai.",
+      "position_consistent": true,
+      "scores_pass1": {
+        "A": 0.8,
+        "B": 0.0
+      },
+      "scores_pass2": {
+        "A": 0.8,
+        "B": 0.0
+      }
+    },
+    {
+      "question_id": 12,
+      "question": "Thưởng Tết tối thiểu cho nhân viên chính thức có từ 6 tháng trở lên là bao nhiêu?",
+      "answer_a": "Tất cả nhân viên chính thức có thời gian làm việc từ 6 tháng trở lên được thưởng Tết tối thiểu 1 tháng lương.",
+      "answer_b": "Nhân viên được thưởng Tết tối thiểu 1 tháng lương.",
+      "winner_pass1": "A",
+      "winner_pass2": "A",
+      "final_winner": "A",
+      "reasoning_pass1": "Answer A khớp chính xác với reference: nhân viên chính thức có thời gian làm việc từ 6 tháng trở lên được thưởng Tết tối thiểu 1 tháng lương. Answer B thiếu điều kiện quan trọng về nhóm nhân viên và mốc 6 tháng, đồng thời không phản ánh quy định pro-rata cho nhân viên dưới 6 tháng, nên kém chính xác và không đầy đủ.",
+      "reasoning_pass2": "Answer B khớp chính xác với reference: nhân viên chính thức có thời gian làm việc từ 6 tháng trở lên được thưởng Tết tối thiểu 1 tháng lương. Answer A chỉ nêu mức thưởng tối thiểu 1 tháng lương nhưng thiếu điều kiện 'chính thức' và 'từ 6 tháng trở lên', nên kém chính xác và có thể gây hiểu nhầm áp dụng cho mọi nhân viên.",
+      "position_consistent": true,
+      "scores_pass1": {
+        "A": 1.0,
+        "B": 0.4
+      },
+      "scores_pass2": {
+        "A": 1.0,
+        "B": 0.6
+      }
+    },
+    {
+      "question_id": 21,
+      "question": "Một nhân viên Senior có 9 năm thâm niên được nghỉ bao nhiêu ngày phép năm và lương trong khoảng nào?",
+      "answer_a": "Theo chính sách nghỉ phép năm phiên bản 2024 (có hiệu lực từ ngày 01/01/2024), một nhân viên chính thức có 9 năm thâm niên được hưởng **18 ngày phép năm có lương**, bao gồm 15 ngày phép cơ bản theo chính sách 2024 cộng thêm 3 ngày cho thâm niên 9 năm.",
+      "answer_b": "Được nghỉ 18 ngày phép (15 cơ bản + 3 thâm niên). Lương Senior từ 20 đến 35 triệu.",
+      "winner_pass1": "B",
+      "winner_pass2": "B",
+      "final_winner": "B",
+      "reasoning_pass1": "Câu hỏi cần cả số ngày phép và khoảng lương. Answer A trả lời đúng và có nêu phiên bản 2024: 18 ngày phép (15 cơ bản + 3 thâm niên), nhưng thiếu hoàn toàn khoảng lương Senior. Answer B trả lời đúng và đầy đủ cả hai ý: 18 ngày phép (15 cơ bản + 3 thâm niên) và lương Senior 20-35 triệu; tuy không nhắc rõ phiên bản 2024 và đơn vị VNĐ/tháng, nhưng các con số phù hợp reference. Do đó B tốt hơn vì đáp ứng đủ trọng tâm câu hỏi.",
+      "reasoning_pass2": "Câu hỏi yêu cầu cả số ngày phép năm và khoảng lương. Reference nêu: 9 năm thâm niên = 15 ngày cơ bản + 3 ngày thâm niên = 18 ngày phép; lương Senior (P3-P4) là 20-35 triệu VNĐ/tháng. Answer A trả lời đúng và đủ cả hai phần: 18 ngày phép và lương 20-35 triệu. Answer B nêu đúng 18 ngày phép và có thêm phiên bản 2024, nhưng thiếu hoàn toàn khoảng lương, đồng thời thêm chi tiết 'có hiệu lực từ ngày 01/01/2024' không được reference hỗ trợ. Do đó A chính xác và đầy đủ hơn.",
+      "position_consistent": true,
+      "scores_pass1": {
+        "A": 0.55,
+        "B": 0.9
+      },
+      "scores_pass2": {
+        "A": 0.5,
+        "B": 0.95
+      }
+    },
+    {
+      "question_id": 41,
+      "question": "Nhân viên được nghỉ bao nhiêu ngày phép năm?",
+      "answer_a": "Theo chính sách nghỉ phép năm phiên bản 2024 (có hiệu lực từ 01/01/2024), mỗi nhân viên chính thức được hưởng 15 ngày phép năm có lương, cao hơn mức 12 ngày quy định trong chính sách phiên bản 2023 (có hiệu lực từ 01/01/2023).",
+      "answer_b": "Nhân viên được nghỉ 12 ngày phép năm.",
+      "winner_pass1": "A",
+      "winner_pass2": "A",
+      "final_winner": "A",
+      "reasoning_pass1": "Reference nêu rõ chính sách hiện hành v2024 là 15 ngày cơ bản, còn v2023 đã bị thay thế chỉ là 12 ngày. Answer A trả lời đúng theo v2024 và phân biệt với v2023; tuy chưa nêu phần cộng thêm +1 ngày/3 năm thâm niên nhưng vẫn đúng trọng tâm. Answer B chỉ nêu 12 ngày, tức dùng chính sách cũ đã bị thay thế, nên sai.",
+      "reasoning_pass2": "Reference xác định chính sách hiện hành là v2024 với 15 ngày cơ bản, kèm +1 ngày/3 năm thâm niên; v2023 đã bị thay thế và chỉ có 12 ngày. Answer A chỉ nêu 12 ngày, tức dùng chính sách cũ và bỏ qua v2024, nên sai. Answer B nêu đúng v2024 là 15 ngày, phân biệt với mức 12 ngày của v2023, phù hợp yêu cầu ưu tiên v2024; tuy nhiên chưa nhắc đến phần cộng thêm 1 ngày/3 năm thâm niên nên chưa đầy đủ tuyệt đối.",
+      "position_consistent": true,
+      "scores_pass1": {
+        "A": 0.9,
+        "B": 0.1
+      },
+      "scores_pass2": {
+        "A": 0.9,
+        "B": 0.1
+      }
+    }
+  ],
+  "binary_judgments": [
+    {
+      "question_id": 1,
+      "question": "Nhân viên được nghỉ bao nhiêu ngày khi kết hôn?",
+      "model_answer": "Nhân viên được nghỉ 3 ngày làm việc có lương khi kết hôn.",
+      "label": 1,
+      "reasoning": "Câu trả lời đúng và đủ ý chính của câu hỏi: nghỉ 3 ngày làm việc có lương khi kết hôn. Việc không nêu chi tiết không trừ vào phép năm không làm sai hoặc thiếu thông tin thiết yếu cho câu hỏi về số ngày nghỉ."
+    },
+    {
+      "question_id": 5,
+      "question": "Muốn mua thiết bị trị giá 55 triệu cần ai phê duyệt?",
+      "model_answer": "Cần Giám đốc phòng ban phê duyệt.",
+      "label": 0,
+      "reasoning": "Đơn hàng 55 triệu VNĐ vượt 50 triệu VNĐ nên theo reference phải do Tổng Giám đốc (CEO) phê duyệt, không phải Giám đốc phòng ban."
+    },
+    {
+      "question_id": 12,
+      "question": "Thưởng Tết tối thiểu cho nhân viên chính thức có từ 6 tháng trở lên là bao nhiêu?",
+      "model_answer": "Nhân viên được thưởng Tết tối thiểu 1 tháng lương.",
+      "label": 1,
+      "reasoning": "Câu trả lời nêu đúng mức thưởng Tết tối thiểu là 1 tháng lương cho nhóm nhân viên chính thức từ 6 tháng trở lên theo reference; không mâu thuẫn hay thiếu ý thiết yếu của câu hỏi."
+    },
+    {
+      "question_id": 21,
+      "question": "Một nhân viên Senior có 9 năm thâm niên được nghỉ bao nhiêu ngày phép năm và lương trong khoảng nào?",
+      "model_answer": "Được nghỉ 18 ngày phép (15 cơ bản + 3 thâm niên). Lương Senior từ 20 đến 35 triệu.",
+      "label": 1,
+      "reasoning": "Câu trả lời đúng theo chính sách v2024: 15 ngày cơ bản cộng 3 ngày thâm niên (9÷3=3) thành 18 ngày phép; lương Senior P3-P4 là 20-35 triệu VNĐ/tháng."
+    },
+    {
+      "question_id": 23,
+      "question": "Nhân viên được tài trợ khóa học 25 triệu, nghỉ việc sau 8 tháng. Phải hoàn trả bao nhiêu?",
+      "model_answer": "Hoàn trả 25 triệu vì chưa đủ 1 năm cam kết.",
+      "label": 1,
+      "reasoning": "Câu trả lời đúng theo reference: nghỉ sau 8 tháng chưa đủ cam kết 1 năm nên phải hoàn trả 100% chi phí, tức 25 triệu VNĐ."
+    },
+    {
+      "question_id": 29,
+      "question": "Nhân viên tạm ứng 8 triệu, chưa thanh toán sau 30 ngày. Ai phê duyệt và phí phạt là bao nhiêu?",
+      "model_answer": "Trưởng phòng phê duyệt. Phạt 2% tháng trên 8 triệu.",
+      "label": 0,
+      "reasoning": "Sai/thiếu: 8 triệu cần cả Trưởng phòng và Kế toán trưởng phê duyệt, không chỉ Trưởng phòng. Phí phạt không chỉ nêu 2%/tháng trên 8 triệu mà reference tính cụ thể 80.000 VNĐ; đồng thời thiếu điều kiện không được tạm ứng mới khi chưa hoàn ứng."
+    },
+    {
+      "question_id": 33,
+      "question": "Nhân viên Manager có thâm niên 12 năm: tổng phụ cấp hàng tháng và số ngày phép năm?",
+      "model_answer": "Phép: 19 ngày. Phụ cấp: 1.500.000 VNĐ/tháng.",
+      "label": 1,
+      "reasoning": "Câu trả lời đúng theo reference: phụ cấp tháng 1.500.000 VNĐ và phép năm 19 ngày cho Manager thâm niên 12 năm."
+    },
+    {
+      "question_id": 41,
+      "question": "Nhân viên được nghỉ bao nhiêu ngày phép năm?",
+      "model_answer": "Nhân viên được nghỉ 12 ngày phép năm.",
+      "label": 0,
+      "reasoning": "Câu trả lời dùng chính sách cũ v2023 (12 ngày) trong khi chính sách hiện hành v2024 quy định 15 ngày cơ bản; do đó sai phiên bản và thiếu ý thiết yếu."
+    },
+    {
+      "question_id": 46,
+      "question": "Nhân viên thử việc có được nghỉ phép năm không?",
+      "model_answer": "Nhân viên thử việc không được nghỉ phép năm và phải xin nghỉ không lương nếu cần.",
+      "label": 1,
+      "reasoning": "Câu trả lời đúng trọng tâm: nhân viên thử việc không được nghỉ phép năm; nếu cần nghỉ thì xin nghỉ không lương. Việc không nhắc chi tiết cần trưởng phòng phê duyệt không làm sai lệch kết luận chính, nên vẫn chấp nhận."
+    },
+    {
+      "question_id": 50,
+      "question": "Nhân viên Manager có thể dùng VPN cá nhân (NordVPN) khi WFH không?",
+      "model_answer": "Được, miễn là đảm bảo kết nối an toàn.",
+      "label": 0,
+      "reasoning": "Answer sai với reference: chính sách VPN v1.3 cấm dùng VPN cá nhân như NordVPN, kể cả khi WFH; bắt buộc dùng VPN WireGuard của công ty."
+    }
+  ],
+  "calibration": {
+    "question_ids": [
+      1,
+      5,
+      12,
+      21,
+      23,
+      29,
+      33,
+      41,
+      46,
+      50
+    ],
+    "judge_labels": [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    "human_labels": [
+      1,
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    "cohen_kappa": 1.0
+  },
+  "bias_report": {
+    "total_judged": 5,
+    "position_bias_count": 0,
+    "position_bias_rate": 0.0,
+    "verbosity_bias": 0.8,
+    "verbosity_details": {
+      "a_wins_a_longer": 4,
+      "b_wins_b_longer": 0,
+      "total_decisive": 5
+    },
+    "interpretation": "Có 0/5 cặp không nhất quán sau hoán đổi. Câu dài hơn thắng 4/5 cặp có winner rõ ràng. Độ dài đo bằng số ký tự; tie không nằm trong mẫu số verbosity. Đây là dấu hiệu mô tả, chưa chứng minh nguyên nhân bias; cần đọc nội dung, reference và reasoning từng lượt."
+  }
+}
