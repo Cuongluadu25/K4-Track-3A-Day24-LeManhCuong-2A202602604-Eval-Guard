@@ -202,18 +202,28 @@ def langchain_llm(model: str, *, max_tokens: int = 2048, caller: str = "ragas"):
         **({"callbacks": [handler]} if handler is not None else {}))
 
 
+EMBED_TIMEOUT_S = float(os.getenv("EMBED_TIMEOUT_S", "60"))
+EMBED_MAX_RETRIES = int(os.getenv("EMBED_MAX_RETRIES", "1"))
+
+
 def langchain_embeddings():
     """OpenAIEmbeddings trỏ LM Studio local.
 
     `check_embedding_ctx_length=False` là BẮT BUỘC: mặc định True khiến LangChain gửi
     mảng token id, LM Studio trả 400 ("'input' field must be a string or an array of strings").
+
+    `timeout` ngắn + ít retry là CỐ Ý (đã trả giá thật): LM Studio từng kẹt ở
+    /v1/embeddings (model ở trạng thái COMPUTINGEMBEDDING) trong khi /v1/models vẫn trả lời
+    trong 22ms; mặc định của LangChain chờ rất lâu nên cả lượt chạy 200 bước đứng im ~70 phút.
+    Với timeout 60s, sự cố kiểu đó lộ ra trong ~2 phút thay vì treo im lặng.
     """
     from langchain_openai import OpenAIEmbeddings
 
     config = settings()
     return OpenAIEmbeddings(model=config["embed_model"], api_key=config["embed_api_key"],
                             base_url=config["embed_base_url"],
-                            check_embedding_ctx_length=False)
+                            check_embedding_ctx_length=False,
+                            timeout=EMBED_TIMEOUT_S, max_retries=EMBED_MAX_RETRIES)
 
 
 def probe(model: str) -> dict:
