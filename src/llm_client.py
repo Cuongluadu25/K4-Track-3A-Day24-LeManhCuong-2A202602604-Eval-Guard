@@ -148,14 +148,18 @@ def langchain_embeddings():
 
 
 def probe(model: str) -> dict:
-    """Gọi 1 request nhỏ để biết model còn phục vụ được không (dùng cho pre-flight)."""
+    """Gọi 1 request nhỏ để biết model còn phục vụ được không (dùng cho pre-flight).
+
+    `ok` chỉ True khi có `content` thật: reasoning model có thể trả HTTP 200 mà `content`
+    rỗng nếu `max_tokens` không đủ — model như vậy không dùng được cho judge/RAGAS.
+    """
     import json
     import urllib.error
     import urllib.request
 
     config = settings()
-    body = json.dumps({"model": model, "max_tokens": 64,
-                       "messages": [{"role": "user", "content": "Reply: OK"}]}).encode()
+    body = json.dumps({"model": model, "max_tokens": 512,
+                       "messages": [{"role": "user", "content": "Reply with exactly: OK"}]}).encode()
     request = urllib.request.Request(
         config["base_url"].rstrip("/") + "/chat/completions", data=body,
         headers={"Authorization": "Bearer " + config["api_key"],
@@ -163,11 +167,15 @@ def probe(model: str) -> dict:
                  "User-Agent": USER_AGENT,
                  "x-opencode-session": config["session"]})
     try:
-        with urllib.request.urlopen(request, timeout=45) as response:
+        with urllib.request.urlopen(request, timeout=90) as response:
             payload = json.loads(response.read().decode("utf-8", "replace"))
         choice = payload["choices"][0]
-        return {"model": model, "ok": True, "http": response.status,
-                "finish_reason": choice.get("finish_reason")}
+        content = (choice.get("message") or {}).get("content")
+        has_content = isinstance(content, str) and bool(content.strip())
+        return {"model": model, "ok": has_content, "http": response.status,
+                "finish_reason": choice.get("finish_reason"),
+                "content": (content or "")[:40],
+                "detail": "" if has_content else "HTTP 200 nhưng content rỗng (chỉ có reasoning)"}
     except urllib.error.HTTPError as error:
         return {"model": model, "ok": False, "http": error.code,
                 "detail": error.read().decode("utf-8", "replace")[:200]}
