@@ -33,25 +33,23 @@ class EnrichedChunk:
 def _chat_json(system: str, user: str, max_tokens: int = 400) -> dict:
     """Gọi LLM 1 lần và parse kết quả thành dict. Trả {} nếu không có key hoặc lỗi.
 
-    ⚠️ LƯU Ý (LM Studio):
-    - KHÔNG dùng response_format={"type": "json_object"} — server trả HTTP 400
-      "'response_format.type' must be 'json_schema' or 'text'".
-    - Model đôi khi bọc JSON trong markdown fence hoặc văn xuôi, nên phải thử
-      json.loads() trước, fail thì regex lấy khối { ... } đầu tiên.
+    Đi qua src/llm_client.chat() nên tự có header x-opencode-session của OpenCode Go,
+    tự chuyển sang FALLBACK_MODEL khi model chính lỗi, và luôn dùng max_tokens đủ lớn
+    cho reasoning model (đặt nhỏ quá thì `content` trả về null).
+
+    KHÔNG dùng response_format={"type": "json_object"} cho các endpoint tự host: LM Studio
+    trả HTTP 400 ("must be 'json_schema' or 'text'"). Vì vậy ở đây parse JSON từ text, có
+    fallback regex lấy khối { ... } đầu tiên khi model bọc JSON trong markdown fence.
     """
     if not OPENAI_API_KEY:
         return {}
     try:
-        from openai import OpenAI
-        client = OpenAI(timeout=120.0, max_retries=2)
-        resp = client.chat.completions.create(
-            model=LLM_MODEL,
-            temperature=0,
-            max_tokens=max_tokens,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": user}],
+        from src import llm_client
+
+        raw = llm_client.chat(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            max_tokens=max(max_tokens, 512),
         )
-        raw = resp.choices[0].message.content.strip()
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
@@ -179,6 +177,10 @@ def enrich_chunks(
         methods: Default None → combined mode (1 call/chunk).
                  Options: "summary", "hyqa", "contextual", "metadata", "combined"
     """
+    if os.getenv("M5_ENRICHMENT", "on").strip().lower() in {"off", "0", "false", "no"}:
+        print("  ⚠️  M5_ENRICHMENT=off → enrich_chunks trả [] (setup dùng chunk gốc; "
+              "đây là fallback hợp lệ theo doc/PIPELINE_INTERFACE.md)")
+        return []
     if methods is None:
         methods = ["combined"]
 
