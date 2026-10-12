@@ -43,7 +43,6 @@ def forbid_network(monkeypatch, request):
 
 @pytest.fixture
 def openai_client(monkeypatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "offline-test-key")
     import json
     client = Mock()
     client.chat.completions.create.return_value = SimpleNamespace(

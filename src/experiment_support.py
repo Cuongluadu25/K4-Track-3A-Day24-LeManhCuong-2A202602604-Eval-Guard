@@ -108,10 +108,10 @@ Trả JSON: {"label": 0 hoặc 1, "reasoning": "giải thích ngắn theo tiêu 
 def judge_binary(question, answer, reference, *, client=None):
     """Provided bridge to 0/1 calibration. Never accepts human_label/human_note."""
     if client is None:
-        from src.llm_client import chat_client
-        client = chat_client()
+        from openai import OpenAI
+        client = OpenAI()
     response = client.chat.completions.create(
-        model=JUDGE_MODEL, temperature=0, max_tokens=2048,
+        model=JUDGE_MODEL, temperature=0,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": BINARY_SYSTEM_PROMPT},
