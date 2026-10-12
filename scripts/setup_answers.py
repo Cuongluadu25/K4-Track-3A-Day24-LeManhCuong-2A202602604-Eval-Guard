@@ -82,6 +82,32 @@ def build_pipeline():
     return search, reranker, RERANK_TOP_K
 
 
+GENERATION_SYSTEM_PROMPT = (
+    "Trả lời CHỈ dựa trên context. Viết câu trả lời bằng tiếng Việt dưới dạng câu hoàn chỉnh "
+    "(một hoặc vài câu, luôn kết thúc bằng dấu chấm), nêu rõ số liệu, điều kiện và phạm vi áp dụng "
+    "có trong context. Không trả lời bằng cụm từ rời hay chỉ một con số. "
+    "Nếu context không có thông tin → trả lời đúng câu: 'Không tìm thấy thông tin.'"
+)
+
+
+GENERATION_MAX_TOKENS = int(os.getenv("GENERATION_MAX_TOKENS", "4096"))
+# Ladder thử lại khi model chính trả content rỗng (reasoning ăn hết token):
+# model dự phòng trước, rồi tới model mạnh hơn. Đã gặp thật: câu multi-hop id 27 trả rỗng ở 1024/2048 token.
+GENERATION_RETRY_MODELS = [name.strip() for name in os.getenv(
+    "GENERATION_RETRY_MODELS", "glm-5.3-flash,qwen3.8-max").split(",") if name.strip()]
+
+
+def _sentence_ok(text: str) -> bool:
+    """Câu trả lời phải là câu hoàn chỉnh, có dấu kết câu.
+
+    RAGAS faithfulness tách 'sentences from the answer' rồi mới sinh statements; một cụm rời
+    như '1.000.000 VNĐ/tháng' (không có dấu chấm) làm RAGAS không sinh được statement nào và
+    trả về NaN cho metric đó — đã gặp thật với câu id 3.
+    """
+    stripped = (text or "").strip()
+    return len(stripped) > 3 and stripped[-1] in ".!?…"
+
+
 def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, list[str], str, str | None]:
     from config import OPENAI_API_KEY
 
@@ -98,36 +124,47 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
                 from src import llm_client
                 client = llm_client.chat_client()
             ctx = "\n\n".join(contexts)
+            messages = [{"role": "system", "content": GENERATION_SYSTEM_PROMPT},
+                        {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}]
             resp = client.chat.completions.create(
                 model=GENERATION_MODEL,
-                max_tokens=2048,   # reasoning model cần đủ chỗ, nếu không content trả về null
-                messages=[
-                    {"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
-                    {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"},
-                ],
+                max_tokens=GENERATION_MAX_TOKENS,
+                messages=messages,
             )
             # Log RAW (ngoài bài nộp): .hermes/llm_raw/ — xem src/llm_log.py
             from src import llm_log
             llm_log.log_chat(caller="setup_answers.generation", model=GENERATION_MODEL,
-                             messages=[{"role": "user", "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}],
-                             max_tokens=2048, response_format=None, response=resp,
+                             messages=messages, max_tokens=GENERATION_MAX_TOKENS,
+                             response_format=None, response=resp,
                              extra={"question": q, "n_contexts": len(contexts)})
             reported_model = getattr(resp, "model", None)
             used_model = reported_model if isinstance(reported_model, str) and reported_model.strip() else GENERATION_MODEL
             content = resp.choices[0].message.content
             if not (isinstance(content, str) and content.strip()):
                 # content rỗng = reasoning model tiêu hết max_tokens trước khi sinh câu trả lời
-                # (đã gặp thật ở 4/50 câu của lượt chạy trước). Thử lại bằng FALLBACK_MODEL
-                # qua llm_client — hàm này tự raise nếu vẫn rỗng, không trả `None` lặng lẽ.
+                # (đã gặp thật ở 4/50 câu và ở 1/8 câu của batch thử). Thử lần lượt các model trong
+                # GENERATION_RETRY_MODELS với ngân sách token lớn hơn; hết cách mới chịu fallback extractive.
                 from src import llm_client
-                fallback_model = llm_client.settings()["fallback"]
-                print(f"  ⚠️  content rỗng với {used_model} → thử lại bằng {fallback_model}")
-                content = llm_client.chat(
-                    [{"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
-                     {"role": "user", "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"}],
-                    model=fallback_model, max_tokens=2048,
-                    caller="setup_answers.generation_retry")
-                used_model = fallback_model
+                print(f"  ⚠️  content rỗng với {used_model} → thử lại lần lượt {GENERATION_RETRY_MODELS}")
+                for retry_model in GENERATION_RETRY_MODELS:
+                    try:
+                        content = llm_client.chat(messages, model=retry_model,
+                                                  max_tokens=GENERATION_MAX_TOKENS,
+                                                  caller="setup_answers.generation_retry")
+                        used_model = retry_model
+                        break
+                    except Exception as retry_error:    # noqa: BLE001 - thử model kế tiếp
+                        print(f"     ✗ {retry_model}: {retry_error}")
+                else:
+                    raise ValueError(
+                        f"mọi model thử lại đều trả content rỗng: {GENERATION_RETRY_MODELS}")
+            if not _sentence_ok(content):
+                # Không sửa câu trả lời của model, chỉ ghi lại: RAGAS faithfulness sẽ không tách
+                # được statement từ cụm rời và metric đó sẽ NaN — đây là rủi ro đã biết.
+                print(f"  ⚠️  câu trả lời không phải câu hoàn chỉnh: {content[:60]!r}")
+                llm_log.log_chat(caller="setup_answers.short_answer", model=used_model,
+                                 messages=messages, max_tokens=2048, response_format=None,
+                                 extra={"question": q, "answer": content})
             return content, contexts, "llm", used_model
         except Exception as e:
             print(f"  ⚠️  LLM generation failed: {e}")

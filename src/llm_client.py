@@ -69,13 +69,13 @@ def embedding_client():
                   timeout=180.0, max_retries=2)
 
 
-def _extract_content(response, model: str) -> str:
+def _extract_content(response, model: str, max_tokens: int = DEFAULT_MAX_TOKENS) -> str:
     choice = response.choices[0]
     content = choice.message.content
     if not isinstance(content, str) or not content.strip():
         raise ValueError(
             f"{model}: content rỗng (finish_reason={choice.finish_reason!r}). "
-            f"Reasoning model cần max_tokens lớn hơn (đang là {DEFAULT_MAX_TOKENS})."
+            f"Reasoning model cần max_tokens lớn hơn (lời gọi này đặt {max_tokens})."
         )
     return content
 
@@ -117,7 +117,7 @@ def chat(messages: list[dict], *, model: str | None = None,
                          max_tokens=max_tokens, response_format=response_format,
                          response=response, latency_ms=(time.perf_counter() - started) * 1000)
         try:
-            return _extract_content(response, candidate)
+            return _extract_content(response, candidate, max_tokens)
         except ValueError as content_error:
             # Reasoning model hết max_tokens trước khi sinh content -> thử model dự phòng.
             errors.append(f"{candidate}: {content_error}")
