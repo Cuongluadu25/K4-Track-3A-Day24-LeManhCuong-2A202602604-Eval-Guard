@@ -93,11 +93,14 @@ def run_query(q: str, search, reranker, top_k: int, client=None) -> tuple[str, l
     if (OPENAI_API_KEY or client is not None) and contexts:
         try:
             if client is None:
-                from openai import OpenAI
-                client = OpenAI()
+                # llm_client gắn header x-opencode-session (bắt buộc với OpenCode Go):
+                # SDK pin trong lab (openai==1.109.1) KHÔNG đọc OPENAI_CUSTOM_HEADERS.
+                from src import llm_client
+                client = llm_client.chat_client()
             ctx = "\n\n".join(contexts)
             resp = client.chat.completions.create(
                 model=GENERATION_MODEL,
+                max_tokens=1024,   # reasoning model cần đủ chỗ, nếu không content trả về null
                 messages=[
                     {"role": "system", "content": "Trả lời CHỈ dựa trên context. Nếu không có → nói 'Không tìm thấy.'"},
                     {"role": "user",   "content": f"Context:\n{ctx}\n\nCâu hỏi: {q}"},
@@ -141,8 +144,8 @@ def main(argv=None):
     from config import OPENAI_API_KEY
     client = None
     if OPENAI_API_KEY:
-        from openai import OpenAI
-        client = OpenAI()
+        from src import llm_client
+        client = llm_client.chat_client()
     t_start = time.time()
 
     for i, item in enumerate(test_set):

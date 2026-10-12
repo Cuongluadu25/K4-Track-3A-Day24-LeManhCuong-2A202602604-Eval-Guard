@@ -1,0 +1,11 @@
+# Constraints bổ sung cho máy này — lý do cụ thể, không thay constraints của đề bài.
+#
+# `constraints-core.txt` pin numpy==1.26.4 (theo ENVIRONMENT.md). Bản pyarrow mới nhất mà pip
+# chọn mặc định (26.x) YÊU CẦU numpy>=2.0, nên `import ragas` chết ngay:
+#     ImportError: pyarrow requires NumPy 2.0 or newer, found 1.26.4
+# (ragas -> datasets -> pyarrow). Vì vậy ghim pyarrow về bản còn hỗ trợ numpy 1.x.
+#
+# Dùng cùng lúc hai file:
+#   python -m pip install -r requirements/requirements.txt \
+#       -c requirements/constraints-core.txt -c requirements/constraints-local.txt
+pyarrow==16.1.0
