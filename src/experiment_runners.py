@@ -52,8 +52,8 @@ def run_phase_b():
             reference=q["ground_truth"])
         results.append({"question_id": qid, **asdict(result)})
     judgments = []
-    from openai import OpenAI
-    binary_client = OpenAI()
+    from src.llm_client import chat_client
+    binary_client = chat_client()
     for human in humans:
         # Exact supplied answer. Never pass human_label or human_note into judge_binary.
         result = judge_binary(human["question"], human["model_answer"],
@@ -88,6 +88,7 @@ def _summarize_input(rows):
 
 def run_phase_c(n_samples=20):
     from src import phase_c_guard as phase
+    from src.llm_client import pace_llm_request
     if n_samples < 20:
         raise ValueError("Submission latency needs at least 20 timed samples.")
     attacks, clean, outputs = [read_json(path) for path in
@@ -98,7 +99,8 @@ def run_phase_c(n_samples=20):
     input_rails = phase.setup_nemo_rails()
     used_guard_models = guard_models(input_rails)
     input_rows = phase.run_adversarial_suite(
-        attacks + clean, rails=input_rails, analyzer=analyzer, anonymizer=anonymizer)
+        attacks + clean, rails=input_rails, analyzer=analyzer, anonymizer=anonymizer,
+        pace_requests=True)
     attack_ids = {row["id"] for row in attacks}
     clean_ids = {row["id"] for row in clean}
     attack_rows = [row for row in input_rows if row["id"] in attack_ids]
@@ -111,6 +113,7 @@ def run_phase_c(n_samples=20):
         used_guard_models.extend(guard_models(rails))
         rows = []
         for case in outputs:
+            await pace_llm_request()
             result = await phase.check_output_rail(case["question"], case["answer"], rails=rails)
             rows.append({**case, **result,
                          "passed": result["safe"] == (case["expected"] == "safe")})
@@ -120,7 +123,8 @@ def run_phase_c(n_samples=20):
     used_guard_models.extend(guard_models(latency_rails))
     latency = phase.measure_p95_latency(
         [row["input"] for row in clean], n_runs=n_samples,
-        rails=latency_rails, analyzer=analyzer, anonymizer=anonymizer)
+        rails=latency_rails, analyzer=analyzer, anonymizer=anonymizer,
+        pace_requests=True)
     clean_summary = _summarize_input(clean_rows)
     clean_summary["false_positive_rate"] = sum(
         row["actual"] == "blocked" for row in clean_rows) / len(clean_rows)

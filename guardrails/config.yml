@@ -2,8 +2,10 @@ colang_version: "1.0"
 
 models:
   - type: main
-    engine: openai
-    model: gpt-4o-mini
+    engine: compat
+    model: longcat-2.5-preview-free
+    parameters:
+      max_tokens: 1024
 
 instructions:
   - type: general

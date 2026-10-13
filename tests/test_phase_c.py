@@ -110,8 +110,18 @@ def test_latency_real_warmup_and_sample_count(monkeypatch):
     nemo=AsyncMock(return_value={"allowed":True,"blocked_reason":None,"response":"clean"})
     monkeypatch.setattr(phase,"pii_scan",pii)
     monkeypatch.setattr(phase,"check_input_rail",nemo)
-    monkeypatch.setattr(phase.time,"perf_counter",Mock(side_effect=[i*.002 for i in range(100)]))
-    result=phase.measure_p95_latency(["clean"],n_runs=20,rails=object(),analyzer=object(),anonymizer=object())
+    events=[]
+    clock=iter(i*.002 for i in range(100))
+    monkeypatch.setattr(phase.time,"perf_counter",
+                        Mock(side_effect=lambda: events.append("timer") or next(clock)))
+    async def pace():
+        events.append("pace")
+    monkeypatch.setattr(phase,"pace_llm_request",pace)
+    result=phase.measure_p95_latency(["clean"],n_runs=20,rails=object(),analyzer=object(),
+                                    anonymizer=object(),pace_requests=True)
     validate_latency(result)
     assert pii.call_count==22 and nemo.await_count==22
     assert result["input_guard_ms"]["p95"]==pytest.approx(4)
+    assert events[:2]==["pace","pace"]
+    assert all(events[index:index+5]==["timer","timer","pace","timer","timer"]
+               for index in range(2,len(events),5))

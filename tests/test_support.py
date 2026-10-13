@@ -189,7 +189,10 @@ def test_schema_documents_are_valid():
 
 def test_phase_c_runner_executes_one_input_batch_and_four_outputs(tmp_path,monkeypatch):
     from src import experiment_runners as runners,phase_c_guard as phase
+    from src import llm_client
     monkeypatch.setattr(runners,"ARTIFACTS_DIR",tmp_path)
+    from unittest.mock import AsyncMock
+    monkeypatch.setattr(llm_client,"pace_llm_request",AsyncMock())
     monkeypatch.setattr(phase,"setup_presidio",lambda:(object(),object()))
     models=iter(["guard-input","guard-output","guard-latency"])
     monkeypatch.setattr(phase,"setup_nemo_rails",lambda:SimpleNamespace(config=SimpleNamespace(
@@ -200,7 +203,6 @@ def test_phase_c_runner_executes_one_input_batch_and_four_outputs(tmp_path,monke
     batched=Mock(side_effect=batch)
     monkeypatch.setattr(phase,"run_adversarial_suite",batched)
     cases={row["answer"]:row for row in read_json(OUTPUT_SET_PATH)}
-    from unittest.mock import AsyncMock
     async def output(q,a,rails=None):
         safe=cases[a]["expected"]=="safe"
         return {"safe":safe,"flagged_reason":None if safe else "sensitive",
@@ -212,7 +214,10 @@ def test_phase_c_runner_executes_one_input_batch_and_four_outputs(tmp_path,monke
     monkeypatch.setattr(phase,"measure_p95_latency",latency)
     report=runners.run_phase_c()
     assert batched.call_count==1 and len(batched.call_args.args[0])==28
+    assert batched.call_args.kwargs["pace_requests"] is True
     assert checked.await_count==4 and latency.call_count==1
+    assert latency.call_args.kwargs["pace_requests"] is True
+    assert llm_client.pace_llm_request.await_count==4
     assert report["clean"]["false_positive_rate"]==0
     assert report["metadata"]["models"]=={
         "generation":[],"evaluator":[],"judge":[],

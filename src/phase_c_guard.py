@@ -11,6 +11,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import ADVERSARIAL_SET_PATH, GUARDRAILS_CONFIG_DIR, LATENCY_BUDGET_P95_MS, PRESIDIO_LANGUAGE
+from src.llm_client import pace_llm_request
 
 
 # Chỉ các loại PII liên quan tới bài toán; bỏ qua PERSON/DATE_TIME/LOCATION của spaCy
@@ -90,8 +91,12 @@ def setup_nemo_rails():
         config.yml  — model + rails config
         rails.co    — câu từ chối Colang 1.0; built-in self-check flows được bật trong YAML
     """
+    from guardrails.config import configure_model, register_provider
     from nemoguardrails import RailsConfig, LLMRails
+
+    register_provider()
     config = RailsConfig.from_path(GUARDRAILS_CONFIG_DIR)
+    configure_model(config)
     rails  = LLMRails(config)
     return rails
 
@@ -176,7 +181,8 @@ async def check_output_rail(question: str, answer: str, rails=None) -> dict:
 # ─── Task 10: Adversarial Test Suite ─────────────────────────────────────────
 
 def run_adversarial_suite(adversarial_set: list[dict], rails=None,
-                           analyzer=None, anonymizer=None) -> list[dict]:
+                           analyzer=None, anonymizer=None,
+                           pace_requests: bool = False) -> list[dict]:
     """Task 10: Chạy 20 adversarial inputs qua full guard stack, so sánh với expected.
 
     Guard stack order:
@@ -209,6 +215,8 @@ def run_adversarial_suite(adversarial_set: list[dict], rails=None,
 
             # Layer 2: NeMo input rail (await, không asyncio.run trong loop)
             if blocked_by is None:
+                if pace_requests:
+                    await pace_llm_request()
                 rail_result = await check_input_rail(item["input"], rails)
                 if not rail_result["allowed"]:
                     blocked_by = "nemo_input"
@@ -234,7 +242,8 @@ def run_adversarial_suite(adversarial_set: list[dict], rails=None,
 # ─── Task 12: P95 Latency Measurement ────────────────────────────────────────
 
 def measure_p95_latency(test_inputs: list[str], n_runs: int = 20,
-                         rails=None, analyzer=None, anonymizer=None) -> dict:
+                         rails=None, analyzer=None, anonymizer=None,
+                         pace_requests: bool = False) -> dict:
     """Task 12: measure INPUT layers sequentially, not end-to-end guard/RAG latency.
 
     Reuse engines. Inside ONE event loop, execute two real warm-up calls per layer,
@@ -257,6 +266,8 @@ def measure_p95_latency(test_inputs: list[str], n_runs: int = 20,
         for i in range(2):
             text = test_inputs[i % len(test_inputs)]
             pii_scan(text, analyzer, anonymizer)
+            if pace_requests:
+                await pace_llm_request()
             await check_input_rail(text, rails)
         samples = []
         for i in range(n_runs):
@@ -264,6 +275,8 @@ def measure_p95_latency(test_inputs: list[str], n_runs: int = 20,
             t0 = time.perf_counter()
             pii_scan(text, analyzer, anonymizer)
             pii_ms = (time.perf_counter() - t0) * 1000
+            if pace_requests:
+                await pace_llm_request()
             t1 = time.perf_counter()
             await check_input_rail(text, rails)   # luôn đo, không short-circuit
             nemo_ms = (time.perf_counter() - t1) * 1000
